@@ -1,0 +1,14 @@
+{
+  "name": "@tjamescouch/token-markers",
+  "version": "0.3.0",
+  "description": "Parser for @@...@@ token markers — state vectors, control callbacks, and memory references",
+  "main": "parser.js",
+  "bin": {
+    "agenttools-markers": "cli.js"
+  },
+  "scripts": {
+    "test": "node parser.test.js"
+  },
+  "keywords": ["agentchat", "token-markers", "llm", "parser"],
+  "license": "MIT"
+}
