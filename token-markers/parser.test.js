@@ -112,6 +112,24 @@ test('mem: uppercase hex', () => {
   assert.strictEqual(m.id, 'ABCDEF01');
 });
 
+test('curated: node id', () => {
+  const m = classify('curated::c06dbf5abc123def');
+  assert.strictEqual(m.type, 'curated');
+  assert.strictEqual(m.nodeId, 'c06dbf5abc123def');
+});
+
+test('curated: short node id', () => {
+  const m = classify('curated::abc123');
+  assert.strictEqual(m.type, 'curated');
+  assert.strictEqual(m.nodeId, 'abc123');
+});
+
+test('curated: empty node id still parses', () => {
+  const m = classify('curated::');
+  assert.strictEqual(m.type, 'curated');
+  assert.strictEqual(m.nodeId, '');
+});
+
 test('unknown: plain text', () => {
   const m = classify('just some text');
   assert.strictEqual(m.type, 'unknown');
@@ -183,6 +201,13 @@ test('parse: adjacent markers', () => {
   assert.strictEqual(markers.length, 2);
   assert.strictEqual(markers[0].type, 'state_vector');
   assert.strictEqual(markers[1].type, 'ctrl');
+});
+
+test('parse: curated marker in transcript', () => {
+  const markers = parse('some transcript content\n@@curated::abc123def456@@\nmore content');
+  assert.strictEqual(markers.length, 1);
+  assert.strictEqual(markers[0].type, 'curated');
+  assert.strictEqual(markers[0].nodeId, 'abc123def456');
 });
 
 // ============================================================
@@ -264,6 +289,17 @@ test('router: dispatches multiple types', () => {
   });
   route('@@joy:0.5@@ @@ctrl:escalate@@ @@mem:abc123@@');
   assert.deepStrictEqual(received, ['state_vector', 'ctrl', 'mem']);
+});
+
+test('router: dispatches curated', () => {
+  let received = null;
+  const route = createRouter({
+    curated: (m) => { received = m; },
+  });
+  route('@@curated::c06dbf5@@');
+  assert.notStrictEqual(received, null);
+  assert.strictEqual(received.type, 'curated');
+  assert.strictEqual(received.nodeId, 'c06dbf5');
 });
 
 test('router: handler errors do not break processing', () => {
