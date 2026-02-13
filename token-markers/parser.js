@@ -9,6 +9,7 @@
  *   - State Vector: @@dimension:float,dimension:float@@
  *   - Control:      @@ctrl:command=value@@ or @@ctrl:command@@
  *   - Memory Ref:   @@mem:id@@ (numeric or hex)
+ *   - Curated:      @@curated::nodeId@@ (curator ingestion bookmark)
  *
  * All @@...@@ patterns are aggressively stripped from output regardless of validity.
  */
@@ -20,12 +21,13 @@
 const MARKER_REGEX = /@@([^@]+)@@/g;
 const CTRL_PREFIX = 'ctrl:';
 const MEM_PREFIX = 'mem:';
+const CURATED_PREFIX = 'curated::';
 const MEM_ID_REGEX = /^[0-9a-fA-F]+$/;
 
 // --- Types ---
 
 /**
- * @typedef {'state_vector' | 'ctrl' | 'mem' | 'unknown'} MarkerType
+ * @typedef {'state_vector' | 'ctrl' | 'mem' | 'curated' | 'unknown'} MarkerType
  *
  * @typedef {Object} StateVectorMarker
  * @property {'state_vector'} type
@@ -43,11 +45,16 @@ const MEM_ID_REGEX = /^[0-9a-fA-F]+$/;
  * @property {string} id
  * @property {string} raw
  *
+ * @typedef {Object} CuratedMarker
+ * @property {'curated'} type
+ * @property {string} nodeId
+ * @property {string} raw
+ *
  * @typedef {Object} UnknownMarker
  * @property {'unknown'} type
  * @property {string} raw
  *
- * @typedef {StateVectorMarker | CtrlMarker | MemMarker | UnknownMarker} Marker
+ * @typedef {StateVectorMarker | CtrlMarker | MemMarker | CuratedMarker | UnknownMarker} Marker
  */
 
 // --- Classification ---
@@ -83,6 +90,12 @@ function classify(payload) {
     }
     // Malformed mem ref — still parsed, id kept as-is
     return { type: 'mem', id, raw };
+  }
+
+  // Curated marker: @@curated::<nodeId>@@ — curator ingestion bookmark
+  if (payload.startsWith(CURATED_PREFIX)) {
+    const nodeId = payload.slice(CURATED_PREFIX.length);
+    return { type: 'curated', nodeId, raw };
   }
 
   // State vector: key:float pairs separated by commas
@@ -157,6 +170,7 @@ function strip(text) {
  * @param {function(StateVectorMarker): void} [handlers.state_vector]
  * @param {function(CtrlMarker): void} [handlers.ctrl]
  * @param {function(MemMarker): void} [handlers.mem]
+ * @param {function(CuratedMarker): void} [handlers.curated]
  * @param {function(UnknownMarker): void} [handlers.unknown]
  * @returns {function(string): string} A function that parses, routes, and returns clean text
  */
